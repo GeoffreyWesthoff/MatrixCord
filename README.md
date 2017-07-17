@@ -8,6 +8,8 @@ Sending messages: ☑ (Simple). ☒ (Neat)
 
 Sending images: ☒
 
+Typing Status: ☑ 
+
 Identification: ☒
 
 User recognition: ☒
@@ -17,5 +19,7 @@ User recognition: ☒
 Sending Messages ☑
 
 Sending Images ☑ (Converted to URL)
+
+Typing status ☑ (Alpha status considering how alpha the rest is)
 
 User is represented as a webhook ☑
