@@ -14,4 +14,6 @@ User recognition: ☒
 
 ### Matrix > Discord:
 
-Nothing :D ☒
+Sending Messages ☑
+Sending Images ☑ (Converted to URL)
+User is represented as a webhook
