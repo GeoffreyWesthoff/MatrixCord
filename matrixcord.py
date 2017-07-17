@@ -17,6 +17,7 @@ discord_token = config['settings']['discord_token']
 webhook_url = config['settings']['webhook_url']
 webhook_user = config['settings']['webhook_user']
 access_token = config['settings']['access_token']
+personal_id = config['settings']['personal_id']
 
 guest_client = MatrixClient('http://matrix.org')
 
@@ -31,6 +32,7 @@ room = matrix_client.join_room(room_id)
 @discord_client.event
 async def on_ready():
     print('MatrixCord is ready')
+    await send_typing()
 
 @discord_client.event
 async def on_message(discord_message):
@@ -39,9 +41,20 @@ async def on_message(discord_message):
         room.send_text("Discord user " + str(discord_message.author) + " says in channel #"+str(discord_message.channel) + ": " + discord_message.content)
         print(webhook_user)
         print(discord_message.author.id)
+        typing_url = 'https://matrix.org/_matrix/client/r0/rooms/' + room_id + '/typing/' + personal_id + '?access_token=' + access_token
+        payload = {'typing': False}
+        headers = {'content-type': 'application/json'}
+        response = requests.put(url=typing_url, data=json.dumps(payload), headers=headers)
+
+@discord_client.event
+async def on_typing(channel,user,when):
+    typing_url = 'https://matrix.org/_matrix/client/r0/rooms/'+room_id+'/typing/'+ personal_id + '?access_token='+access_token
+    payload = {'typing': True,'timeout': 5000 }
+    headers = {'content-type': 'application/json'}
+    response = requests.put(url=typing_url,data=json.dumps(payload),headers=headers)
 
 
-def on_matrix_message(room, event):
+def matrix_event_listener(room,event):
     if event['type'] == "m.room.message":
         if event['content']['msgtype'] == "m.text":
             user = matrix_client.get_user(event['sender'])
@@ -50,7 +63,6 @@ def on_matrix_message(room, event):
             headers = {'content-type': 'application/json'}
             if not event['content']['body'].startswith('Discord user'):
                 response = requests.post(url=str(webhook_url), data=json.dumps(payload),headers=headers)
-                print(response)
         if event['content']['msgtype'] == "m.image":
             user = matrix_client.get_user(event['sender'])
             image_id = event['content']['url'].rsplit('/',1)[1]
@@ -60,10 +72,29 @@ def on_matrix_message(room, event):
             headers_image = {'content-type': 'application/json'}
             requests.post(url=str(webhook_url), data=json.dumps(payload_image), headers=headers_image)
 
+matrix_typing = False
 
-room.add_listener(on_matrix_message)
+def matrix_eph_event_listener(room,event):
+    print(event)
+    global matrix_typing
+    if event['type'] == "m.typing":
+        matrix_typing = True
+    else:
+        matrix_typing = False
+
+async def send_typing():
+    global matrix_typing
+    if matrix_typing == True:
+        await discord_client.send_typing(discord_client.get_channel(channel))
+        matrix_typing = False
+        await asyncio.sleep(5)
+        await send_typing()
+    else:
+        await asyncio.sleep(5)
+        await send_typing()
+
+room.add_listener(matrix_event_listener)
+room.add_ephemeral_listener(matrix_eph_event_listener)
 matrix_client.start_listener_thread()
-
-
 
 discord_client.run(discord_token)
